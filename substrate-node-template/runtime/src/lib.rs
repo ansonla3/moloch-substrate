@@ -243,9 +243,16 @@ impl token::Trait for Runtime {
 	type TokenBalance = u128;
 }
 
+parameter_types! {
+	pub const StartingPeriod: BlockNumber = 10;
+	pub const VotingPeriod: BlockNumber = 20;
+}
+
 /// Used for the module template in `./template.rs`
 impl template::Trait for Runtime {
 	type Event = Event;
+	type StartingPeriod = StartingPeriod;
+	type VotingPeriod = VotingPeriod;
 }
 
 construct_runtime!(

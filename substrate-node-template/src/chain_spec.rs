@@ -134,8 +134,6 @@ fn testnet_genesis(initial_authorities: Vec<(AuraId, GrandpaId)>,
 		}),
 		template: Some(TemplateConfig {
 			owner: get_from_seed::<AccountId>("Alice"),
-			voting_starting_period: 10,
-			voting_period_length: 20,
 			minimum_deposit: 2,
 			processing_reward: 1,
 		})

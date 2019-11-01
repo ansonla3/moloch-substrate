@@ -10,14 +10,20 @@
 
 use crate::token;
 use support::{ensure, decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result};
+use support::traits::Get;
 use system::ensure_signed;
 use codec::{Encode, Decode};
 use rstd::prelude::*;
+
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait + token::Trait {
 	/// The overarching event type.
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
+
+	type StartingPeriod: Get<Self::BlockNumber>;
+
+	type VotingPeriod: Get<Self::BlockNumber>;
 }
 
 #[derive(Encode, Decode, Default, Clone, PartialEq)]
@@ -46,10 +52,6 @@ type ProposalIndex = u32;
 // This module's storage items.
 decl_storage! {
 	trait Store for Module<T: Trait> as Template {
-        StartingPeriod get(voting_starting_period) config(): T::BlockNumber;
-
-		VotingPeriod get(voting_period_length) config(): T::BlockNumber; 
-
 		MinimumDeposit get(minimum_deposit) config(): T::TokenBalance;
 
 		ProcessingReward get(processing_reward) config(): T::TokenBalance;
@@ -80,6 +82,10 @@ decl_module! {
 		// this is needed only if you are using events in your module
 		fn deposit_event() = default;
 
+		const StartingPeriod: T::BlockNumber = T::StartingPeriod::get();
+
+		const VotingPeriod: T::BlockNumber = T::VotingPeriod::get();
+	
 		fn init(origin, init_value: T::TokenBalance) {
 			let sender = ensure_signed(origin)?;
 			ensure!(sender == Self::owner(), "Only the owner in genesis config can initialize the Token");
@@ -100,16 +106,16 @@ decl_module! {
 
 			let starting_period;
 			if Self::total_submitted_proposals() == 0 {
-				starting_period = <system::Module<T>>::block_number() + Self::voting_starting_period();
+				starting_period = <system::Module<T>>::block_number() + T::StartingPeriod::get();
 			} else {
 				let num_of_proposals = Self::total_submitted_proposals();
 				let proposal = Self::proposal(num_of_proposals);
 
 				// TODO: Refactor
 				if <system::Module<T>>::block_number() > proposal.starting_period {
-					starting_period = <system::Module<T>>::block_number() + Self::voting_starting_period();
+					starting_period = <system::Module<T>>::block_number() + T::StartingPeriod::get();
 				} else {
-					starting_period = proposal.starting_period + Self::voting_starting_period();
+					starting_period = proposal.starting_period + T::StartingPeriod::get();
 				}
 			}
 			
@@ -138,7 +144,7 @@ decl_module! {
 		pub fn submit_vote(origin, proposal_index: u32, unit_vote: u8) -> Result {
 			let sender = ensure_signed(origin)?;
 			let mut proposal = Self::proposal(proposal_index);
-			let voting_expired_period = proposal.starting_period + Self::voting_period_length();
+			let voting_expired_period = proposal.starting_period + T::VotingPeriod::get();
 			let mut member = <Members<T>>::get(sender.clone());
 			let vote = <MemberVoting<T>>::get((sender.clone(), proposal_index));
 
@@ -149,6 +155,7 @@ decl_module! {
 			ensure!(vote.is_none(), "Member has already voted on this proposal");
 			ensure!(!proposal.aborted, "Proposal has been aborted");
 
+			// TODO: Ensure max_requested_shares <= total_supply
 			// TODO: Member Checking
 
 			if unit_vote == 0 {
@@ -171,7 +178,7 @@ decl_module! {
 		pub fn process_proposal(origin, proposal_index: u32) -> Result {
 			let sender = ensure_signed(origin)?;
 			let mut proposal = Self::proposal(proposal_index);
-			let voting_expired_period = proposal.starting_period + Self::voting_period_length();
+			let voting_expired_period = proposal.starting_period + T::VotingPeriod::get();
 			
 			ensure!(<Proposals<T>>::exists(proposal_index), "This proposal does not exist");
 			ensure!(<system::Module<T>>::block_number() > voting_expired_period , "Proposal is not ready to be processed");
@@ -201,7 +208,8 @@ decl_module! {
 			}
 			proposal.processed = true;
 
-			<token::Module<T>>::unlock(proposal.proposer.clone(), Self::minimum_deposit() - Self::processing_reward())?;
+			let unlock_value = Self::minimum_deposit() - Self::processing_reward();
+			<token::Module<T>>::unlock(proposal.proposer.clone(), unlock_value)?;
 			<token::Module<T>>::balance_transfer(proposal.proposer.clone(), sender.clone(), Self::processing_reward())?;
 			<Proposals<T>>::insert(proposal_index, &proposal);
 
@@ -211,7 +219,6 @@ decl_module! {
 			Ok(())
 		}
 		// TODO: rage_quit & abort implementation
-
 	}
 }
 
@@ -221,7 +228,6 @@ decl_event!(
 		BlockNumber = <T as system::Trait>::BlockNumber,
 		TokenBalance = <T as token::Trait>::TokenBalance
 	{
-		SomethingStored(u32, AccountId),
 		SubmitProposal(u32, AccountId, AccountId, TokenBalance, BlockNumber),
 		SubmitVote(u32, AccountId, u8),
 		ProcessProposal(u32, AccountId, AccountId, TokenBalance, bool),
