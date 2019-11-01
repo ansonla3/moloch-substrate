@@ -70,7 +70,7 @@ decl_storage! {
 		
 		TotalProposalSubmitted get(total_submitted_proposals): u32 = 0;
 
-		Proposals get(proposal): map u32 => Proposal<T::AccountId, T::BlockNumber, T::TokenBalance>;
+		Proposals get(proposal): map ProposalIndex => Proposal<T::AccountId, T::BlockNumber, T::TokenBalance>;
 	}
 }
 
