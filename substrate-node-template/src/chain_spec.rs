@@ -1,7 +1,7 @@
 use primitives::{Pair, Public};
 use node_template_runtime::{
 	AccountId, AuraConfig, BalancesConfig, GenesisConfig, GrandpaConfig,
-	SudoConfig, IndicesConfig, SystemConfig, WASM_BINARY, 
+	SudoConfig, IndicesConfig, SystemConfig, WASM_BINARY, TemplateConfig, TokenConfig
 };
 use aura_primitives::sr25519::{AuthorityId as AuraId};
 use grandpa_primitives::{AuthorityId as GrandpaId};
@@ -129,5 +129,15 @@ fn testnet_genesis(initial_authorities: Vec<(AuraId, GrandpaId)>,
 		grandpa: Some(GrandpaConfig {
 			authorities: initial_authorities.iter().map(|x| (x.1.clone(), 1)).collect(),
 		}),
+		token: Some(TokenConfig {
+			total_supply: 1000000,
+		}),
+		template: Some(TemplateConfig {
+			owner: get_from_seed::<AccountId>("Alice"),
+			voting_starting_period: 10,
+			voting_period_length: 20,
+			minimum_deposit: 2,
+			processing_reward: 1,
+		})
 	}
 }

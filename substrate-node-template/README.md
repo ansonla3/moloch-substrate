@@ -1,6 +1,17 @@
-# Substrate Node Template
+# MolochDAO in Substrate (Workshop)
 
-A new SRML-based Substrate node, ready for hacking.
+If you do know what MolochDAO is, please read [ths](https://medium.com/@simondlr/the-moloch-dao-collapsing-the-firm-2a800b3aa2e7) first.
+
+
+### Submit Proposal
+
+### Submit Vote
+
+### Process Proposal
+
+### Ragequit (Todo)
+
+### Abort (Todo)
 
 ## Build
 
